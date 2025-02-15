@@ -42,10 +42,6 @@ void main() {
     );
   });
 
-  tearDownAll(() async {
-    await Supabase.instance.client.dispose();
-  });
-
   group('Registration Tests', () {
     final validEmail = 'test@example.com';
     final validPassword = 'password123';
@@ -83,8 +79,8 @@ void main() {
           ));
 
       // Act & Assert
-      expect(
-        () => authRepository.signUp(
+      await expectLater(
+        authRepository.signUp(
           email: validEmail,
           password: validPassword,
           fullName: validFullName,

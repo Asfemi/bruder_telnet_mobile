@@ -35,10 +35,6 @@ void main() {
     );
   });
 
-  tearDownAll(() async {
-    await Supabase.instance.client.dispose();
-  });
-
   group('Login Tests', () {
     final validEmail = 'test@example.com';
     final validPassword = 'password123';
@@ -53,8 +49,8 @@ void main() {
           )).thenAnswer((_) async => AuthResponse());
 
       // Act & Assert
-      expect(
-        () => authRepository.signIn(
+      await expectLater(
+        authRepository.signIn(
           email: validEmail,
           password: validPassword,
         ),
@@ -70,8 +66,8 @@ void main() {
           )).thenThrow(AuthExceptions.userNotFound());
 
       // Act & Assert
-      expect(
-        () => authRepository.signIn(
+      await expectLater(
+        authRepository.signIn(
           email: invalidEmail,
           password: validPassword,
         ),
@@ -87,8 +83,8 @@ void main() {
           )).thenThrow(AuthExceptions.invalidCredentials());
 
       // Act & Assert
-      expect(
-        () => authRepository.signIn(
+      await expectLater(
+        authRepository.signIn(
           email: validEmail,
           password: invalidPassword,
         ),
@@ -98,8 +94,8 @@ void main() {
 
     test('login fails with empty email', () async {
       // Act & Assert
-      expect(
-        () => authRepository.signIn(
+      await expectLater(
+        authRepository.signIn(
           email: '',
           password: validPassword,
         ),
@@ -109,8 +105,8 @@ void main() {
 
     test('login fails with empty password', () async {
       // Act & Assert
-      expect(
-        () => authRepository.signIn(
+      await expectLater(
+        authRepository.signIn(
           email: validEmail,
           password: '',
         ),
@@ -126,8 +122,8 @@ void main() {
           )).thenThrow(Exception('Network error'));
 
       // Act & Assert
-      expect(
-        () => authRepository.signIn(
+      await expectLater(
+        authRepository.signIn(
           email: validEmail,
           password: validPassword,
         ),
