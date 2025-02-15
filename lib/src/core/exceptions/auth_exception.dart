@@ -62,7 +62,7 @@ class AuthExceptions implements Exception {
   }
 
   factory AuthExceptions.weakPassword() {
-    return const AuthExceptions (
+    return const AuthExceptions(
       message: 'Das Passwort muss mindestens 8 Zeichen lang sein',
       code: 'WEAK_PASSWORD',
     );
@@ -76,5 +76,5 @@ class AuthExceptions implements Exception {
   }
 
   @override
-  String toString() => 'AuthException: $message (Code: $code)';
+  String toString() => message;
 }

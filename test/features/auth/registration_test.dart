@@ -6,6 +6,7 @@ import 'package:bruder_telnet_mobile/src/features/auth/data/data_source/remote_d
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Mock classes
 class MockAuthRepository extends Mock implements AuthRepository {}
@@ -22,12 +23,27 @@ void main() {
   late MockGoTrueClient mockGoTrueClient;
   late MockRemoteDataSource mockRemoteDataSource;
 
+  setUpAll(() async {
+    await dotenv.load(fileName: '.env');
+  });
+
   setUp(() {
     mockSupabaseClient = MockSupabaseClient();
     mockGoTrueClient = MockGoTrueClient();
     mockRemoteDataSource = MockRemoteDataSource();
+
+    // Setup mock behavior
     when(() => mockSupabaseClient.auth).thenReturn(mockGoTrueClient);
-    authRepository = AuthRepositoryImpl();
+
+    // Inject mocked client into repository
+    authRepository = AuthRepositoryImpl(
+      supabaseClient: mockSupabaseClient,
+      remoteDataSource: mockRemoteDataSource,
+    );
+  });
+
+  tearDownAll(() async {
+    await Supabase.instance.client.dispose();
   });
 
   group('Registration Tests', () {

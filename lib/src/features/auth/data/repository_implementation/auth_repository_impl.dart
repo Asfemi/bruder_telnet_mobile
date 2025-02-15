@@ -16,10 +16,16 @@ import 'dart:developer' as dev;
 /// 2. Handles authentication state using Supabase
 class AuthRepositoryImpl implements AuthRepository {
   /// Supabase client instance for authentication
-  final _supabase = SupabaseConfig.client;
+  final SupabaseClient _supabase;
 
   /// API service instance for external API calls
-  final _apiService = RemoteDataSource();
+  final RemoteDataSource _apiService;
+
+  AuthRepositoryImpl({
+    SupabaseClient? supabaseClient,
+    RemoteDataSource? remoteDataSource,
+  })  : _supabase = supabaseClient ?? SupabaseConfig.client,
+        _apiService = remoteDataSource ?? RemoteDataSource();
 
   final _dio = Dio(BaseOptions(
     baseUrl: dotenv.env['NEXT_PUBLIC_API_URL']!,

@@ -4,6 +4,7 @@ import 'package:bruder_telnet_mobile/src/core/exceptions/auth_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Mock classes
 class MockAuthRepository extends Mock implements AuthRepository {}
@@ -17,11 +18,25 @@ void main() {
   late MockSupabaseClient mockSupabaseClient;
   late MockGoTrueClient mockGoTrueClient;
 
+  setUpAll(() async {
+    await dotenv.load(fileName: '.env');
+  });
+
   setUp(() {
     mockSupabaseClient = MockSupabaseClient();
     mockGoTrueClient = MockGoTrueClient();
+
+    // Setup mock behavior
     when(() => mockSupabaseClient.auth).thenReturn(mockGoTrueClient);
-    authRepository = AuthRepositoryImpl();
+
+    // Inject mocked client into repository
+    authRepository = AuthRepositoryImpl(
+      supabaseClient: mockSupabaseClient,
+    );
+  });
+
+  tearDownAll(() async {
+    await Supabase.instance.client.dispose();
   });
 
   group('Login Tests', () {
@@ -125,7 +140,7 @@ void main() {
       final mockSession = Session(
         accessToken: 'mock_token',
         tokenType: 'bearer',
-        user: User( 
+        user: User(
           id: '123',
           email: validEmail,
           createdAt: DateTime.now().toString(),
