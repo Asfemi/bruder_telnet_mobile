@@ -99,8 +99,8 @@ void main() {
           )).thenAnswer((_) async => []);
 
       // Act & Assert
-      expect(
-        () => authRepository.signUp(
+      await expectLater(
+        authRepository.signUp(
           email: validEmail,
           password: validPassword,
           fullName: validFullName,
@@ -116,8 +116,8 @@ void main() {
 
     test('registration fails with invalid name format', () async {
       // Act & Assert
-      expect(
-        () => authRepository.signUp(
+      await expectLater(
+        authRepository.signUp(
           email: validEmail,
           password: validPassword,
           fullName: 'John', // Missing last name
@@ -133,8 +133,8 @@ void main() {
 
     test('registration fails with weak password', () async {
       // Act & Assert
-      expect(
-        () => authRepository.signUp(
+      await expectLater(
+        authRepository.signUp(
           email: validEmail,
           password: '123', // Too short
           fullName: validFullName,
@@ -150,8 +150,8 @@ void main() {
 
     test('registration fails with invalid phone format', () async {
       // Act & Assert
-      expect(
-        () => authRepository.signUp(
+      await expectLater(
+        authRepository.signUp(
           email: validEmail,
           password: validPassword,
           fullName: validFullName,
@@ -174,8 +174,8 @@ void main() {
           )).thenThrow(Exception('Network error'));
 
       // Act & Assert
-      expect(
-        () => authRepository.signUp(
+      await expectLater(
+        authRepository.signUp(
           email: validEmail,
           password: validPassword,
           fullName: validFullName,

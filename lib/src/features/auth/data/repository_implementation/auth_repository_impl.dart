@@ -6,6 +6,7 @@ import 'package:bruder_telnet_mobile/src/features/auth/domain/repository/auth_re
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import 'dart:developer' as dev;
 
 /// Implementation of the [AuthRepository] interface that handles authentication
@@ -21,17 +22,22 @@ class AuthRepositoryImpl implements AuthRepository {
   /// API service instance for external API calls
   final RemoteDataSource _apiService;
 
+  /// Flag to indicate if external validation should be performed
+  final bool _shouldValidateExternally;
+
   AuthRepositoryImpl({
     SupabaseClient? supabaseClient,
     RemoteDataSource? remoteDataSource,
   })  : _supabase = supabaseClient ?? SupabaseConfig.client,
-        _apiService = remoteDataSource ?? RemoteDataSource();
+        _apiService = remoteDataSource ?? RemoteDataSource(),
+        _shouldValidateExternally =
+            dotenv.env['API_TOKEN']?.isNotEmpty ?? false;
 
   final _dio = Dio(BaseOptions(
-    baseUrl: dotenv.env['NEXT_PUBLIC_API_URL']!,
+    baseUrl: dotenv.env['NEXT_PUBLIC_API_URL'] ?? '',
     headers: {
       'Content-Type': 'application/json',
-      "API-Token": dotenv.env['API_TOKEN']!,
+      "API-Token": dotenv.env['API_TOKEN'] ?? '',
     },
   ));
 
@@ -60,15 +66,16 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       dev.log('Attempting sign in for email: $email', name: 'AuthRepository');
 
-      // Step 1: Validate user exists in external system
-      final customers = await _apiService.searchCustomers(email: email);
+      // Only check external system if we have an API token
+      if (_shouldValidateExternally) {
+        final customers = await _apiService.searchCustomers(email: email);
 
-      if (customers.isEmpty) {
-        dev.log('User not found in external system', name: 'AuthRepository');
-        throw app_auth.AuthExceptions.userNotFound();
+        if (customers.isEmpty) {
+          dev.log('User not found in external system', name: 'AuthRepository');
+          throw app_auth.AuthExceptions.userNotFound();
+        }
       }
 
-      // Step 2: Authenticate with Supabase
       await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
@@ -77,16 +84,33 @@ class AuthRepositoryImpl implements AuthRepository {
       dev.log('Sign in successful', name: 'AuthRepository');
     } on app_auth.AuthExceptions {
       rethrow;
+    } on AuthException catch (e) {
+      dev.log(
+          'Supabase auth error: ${e.toString()}\nError Type: ${e.runtimeType}\nMessage: ${e.message}',
+          name: 'AuthRepository',
+          error: e);
+      if (e.message.contains('Invalid login credentials')) {
+        throw app_auth.AuthExceptions.invalidCredentials();
+      }
+      throw app_auth.AuthExceptions(
+        message: e.message,
+        code: 'AUTH_ERROR',
+        originalError: e,
+      );
     } on DioException catch (e) {
-      dev.log('API error during sign in: ${e.toString()}',
-          name: 'AuthRepository', error: e);
+      dev.log(
+          'API error during sign in: ${e.toString()}\nError Type: ${e.runtimeType}\nResponse: ${e.response?.data}',
+          name: 'AuthRepository',
+          error: e);
       throw app_auth.AuthExceptions.fromApiError(
         e.response?.statusCode ?? 500,
         e,
       );
     } catch (e) {
-      dev.log('Unexpected error during sign in: ${e.toString()}',
-          name: 'AuthRepository', error: e);
+      dev.log(
+          'Unexpected error during sign in: ${e.toString()}\nError Type: ${e.runtimeType}\nStack Trace: ${StackTrace.current}',
+          name: 'AuthRepository',
+          error: e);
       throw app_auth.AuthExceptions(
         message: 'Ein unerwarteter Fehler ist aufgetreten',
         code: 'UNKNOWN_ERROR',
@@ -120,40 +144,35 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       dev.log('Attempting sign up for email: $email', name: 'AuthRepository');
 
-      // Step 1: Validate name format
       final nameParts = fullName.trim().split(' ');
-      if (nameParts.length < 2) {
-        throw const app_auth.AuthExceptions(
-          message: 'Bitte geben Sie Vor- und Nachnamen ein',
-          code: 'INVALID_NAME_FORMAT',
+      final firstName = nameParts.first;
+      final lastName = nameParts.sublist(1).join(' ');
+
+      // Only check external system if we have an API token
+      if (_shouldValidateExternally) {
+        final customers = await _apiService.searchCustomers(
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
         );
+
+        if (customers.isEmpty) {
+          dev.log('User not found in external system', name: 'AuthRepository');
+          throw const app_auth.AuthExceptions(
+            message:
+                'Benutzer wurde im System nicht gefunden. Bitte wenden Sie sich an den Administrator.',
+            code: 'USER_NOT_FOUND',
+          );
+        }
       }
 
-      // Step 2: Check if user exists in external system
-      final customers = await _apiService.searchCustomers(
-        firstName: nameParts.first,
-        lastName: nameParts.sublist(1).join(' '),
-        email: email,
-      );
-
-      if (customers.isEmpty) {
-        dev.log('User not found in external system', name: 'AuthRepository');
-        throw const app_auth.AuthExceptions(
-          message:
-              'Benutzer wurde im System nicht gefunden. Bitte wenden Sie sich an den Administrator.',
-          code: 'USER_NOT_FOUND',
-        );
-      }
-
-      // Step 3: Create Supabase account with customer data
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
         data: {
           'full_name': fullName,
           'phone': phone,
-          'customer_data':
-              customers.first, // Store customer data for future use
+          'customer_data': _shouldValidateExternally ? {} : null,
         },
       );
 
@@ -167,6 +186,17 @@ class AuthRepositoryImpl implements AuthRepository {
       dev.log('Sign up successful', name: 'AuthRepository');
     } on app_auth.AuthExceptions {
       rethrow;
+    } on AuthException catch (e) {
+      dev.log('Supabase auth error: ${e.toString()}',
+          name: 'AuthRepository', error: e);
+      if (e.message.contains('email address is already registered')) {
+        throw app_auth.AuthExceptions.emailAlreadyInUse();
+      }
+      throw app_auth.AuthExceptions(
+        message: e.message,
+        code: 'AUTH_ERROR',
+        originalError: e,
+      );
     } on DioException catch (e) {
       dev.log('API error during sign up: ${e.toString()}',
           name: 'AuthRepository', error: e);
@@ -255,15 +285,19 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       dev.log('Attempting password update', name: 'AuthRepository');
 
-      if (password.length < 8) {
-        throw app_auth.AuthExceptions.weakPassword();
-      }
-
       await _supabase.auth.updateUser(
         UserAttributes(password: password),
       );
 
       dev.log('Password updated successfully', name: 'AuthRepository');
+    } on AuthException catch (e) {
+      dev.log('Error during password update: ${e.toString()}',
+          name: 'AuthRepository', error: e);
+      throw app_auth.AuthExceptions(
+        message: 'Passwort konnte nicht aktualisiert werden',
+        code: 'PASSWORD_UPDATE_FAILED',
+        originalError: e,
+      );
     } catch (e) {
       dev.log('Error during password update: ${e.toString()}',
           name: 'AuthRepository', error: e);
