@@ -1,0 +1,2 @@
+C:/Users/ASFemi/Desktop/study.sam/bruder_telnet_mobile/android/app/.cxx/Debug/5l5q3t1l/x86/CMakeFiles/edit_cache.dir
+C:/Users/ASFemi/Desktop/study.sam/bruder_telnet_mobile/android/app/.cxx/Debug/5l5q3t1l/x86/CMakeFiles/rebuild_cache.dir

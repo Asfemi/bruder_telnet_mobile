@@ -34,7 +34,7 @@ class RegisterScreen extends HookConsumerWidget {
         },
         data: (_) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('registration successful'),
               backgroundColor: Colors.green,
             ),

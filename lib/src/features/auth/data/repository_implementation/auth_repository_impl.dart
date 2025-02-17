@@ -66,15 +66,15 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       dev.log('Attempting sign in for email: $email', name: 'AuthRepository');
 
-      // Only check external system if we have an API token
-      if (_shouldValidateExternally) {
-        final customers = await _apiService.searchCustomers(email: email);
+      // // Only check external system if we have an API token
+      // if (_shouldValidateExternally) {
+      //   final customers = await _apiService.searchCustomers(email: email);
 
-        if (customers.isEmpty) {
-          dev.log('User not found in external system', name: 'AuthRepository');
-          throw app_auth.AuthExceptions.userNotFound();
-        }
-      }
+      //   if (customers.isEmpty) {
+      //     dev.log('User not found in external system', name: 'AuthRepository');
+      //     throw app_auth.AuthExceptions.userNotFound();
+      //   }
+      // }
 
       await _supabase.auth.signInWithPassword(
         email: email,
