@@ -150,29 +150,43 @@ class AuthRepositoryImpl implements AuthRepository {
 
       // Only check external system if we have an API token
       if (_shouldValidateExternally) {
-        final customers = await _apiService.searchCustomers(
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-        );
-
-        if (customers.isEmpty) {
-          dev.log('User not found in external system', name: 'AuthRepository');
-          throw const app_auth.AuthExceptions(
-            message:
-                'Benutzer wurde im System nicht gefunden. Bitte wenden Sie sich an den Administrator.',
-            code: 'USER_NOT_FOUND',
+        try {
+          // Check if user exists in external system with matching name and email
+          final customers = await _apiService.searchCustomers(
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
           );
+
+          // User must exist in external system to register
+          if (customers.isEmpty) {
+            dev.log('User not found in external system',
+                name: 'AuthRepository');
+            throw const app_auth.AuthExceptions(
+              message:
+                  'Benutzer wurde im System nicht gefunden. Bitte wenden Sie sich an den Administrator.',
+              code: 'USER_NOT_FOUND',
+            );
+          }
+
+          dev.log('User found in external system, proceeding with registration',
+              name: 'AuthRepository');
+        } on DioException catch (e) {
+          dev.log('API error during customer search: ${e.toString()}',
+              name: 'AuthRepository', error: e);
+          throw app_auth.AuthExceptions.fromApiError(
+              e.response?.statusCode ?? 500, e);
         }
       }
 
+      // Create Supabase account only if user exists in external system (or if validation is disabled)
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
         data: {
           'full_name': fullName,
           'phone': phone,
-          'customer_data': _shouldValidateExternally ? {} : null,
+          'customer_data': null,
         },
       );
 
@@ -197,14 +211,9 @@ class AuthRepositoryImpl implements AuthRepository {
         code: 'AUTH_ERROR',
         originalError: e,
       );
-    } on DioException catch (e) {
-      dev.log('API error during sign up: ${e.toString()}',
-          name: 'AuthRepository', error: e);
-      throw app_auth.AuthExceptions.fromApiError(
-        e.response?.statusCode ?? 500,
-        e,
-      );
     } catch (e) {
+      if (e is app_auth.AuthExceptions) rethrow;
+
       dev.log('Unexpected error during sign up: ${e.toString()}',
           name: 'AuthRepository', error: e);
       throw app_auth.AuthExceptions(

@@ -32,7 +32,7 @@ class LoginScreen extends HookConsumerWidget {
           );
         },
         data: (_) {
-          context.go(AppRoutes.contracts.name);
+          context.pushNamed(AppRoutes.contracts.name);
         },
       );
     });
