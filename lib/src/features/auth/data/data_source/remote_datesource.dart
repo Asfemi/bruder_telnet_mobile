@@ -83,11 +83,11 @@ class RemoteDataSource   {
       final customers = List<Map<String, dynamic>>.from(response.data['data']);
 
       // If email is provided, filter results by email
-      if (email != null) {
-        return customers
-            .where((customer) => customer['email'] == email)
-            .toList();
-      }
+      // if (email != null) {
+      //   return customers
+      //       .where((customer) => customer['email'] == email)
+      //       .toList();
+      // }
 
       return customers;
     } catch (e) {
