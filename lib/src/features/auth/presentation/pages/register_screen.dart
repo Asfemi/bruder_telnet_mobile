@@ -1,5 +1,6 @@
 import 'package:bruder_telnet_mobile/gen/assets.gen.dart';
 import 'package:bruder_telnet_mobile/src/core/constants/app_sizes.dart';
+import 'package:bruder_telnet_mobile/src/core/router/app_router.dart';
 import 'package:bruder_telnet_mobile/src/features/auth/presentation/controller/auth_controller.dart';
 import 'package:bruder_telnet_mobile/src/shared/primary_button.dart';
 import 'package:bruder_telnet_mobile/src/shared/primary_textfield.dart';
@@ -39,7 +40,7 @@ class RegisterScreen extends HookConsumerWidget {
               backgroundColor: Colors.green,
             ),
           );
-          context.pop();
+          context.pushNamed(AppRoutes.login.name);
         },
       );
     });
